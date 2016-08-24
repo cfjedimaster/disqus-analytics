@@ -63,132 +63,110 @@
             </div>
 		</div>
 
-		<div class="row">
+		<div id="setup">
 
-			<div class="page-header">
-              <h1 >General Stats</h1>
-            </div>
+			<div class="row">
 
-			<div class="bs-component">
-
-				<div class="col-lg-3">
-					<h2 class="text-center">Total Comments</h2>
-					<h1 class="text-center">61,569</h1>
-				</div>
-				<div class="col-lg-3">
-					<h2 class="text-center">Avg. Per Thread</h2>
-					<h1 class="text-center">10.8</h1>
-				</div>
-				<div class="col-lg-3">
-					<h2 class="text-center">First Comment</h2>
-					<h1 class="text-center">Feb 12, 2003</h1>
-				</div>
-				<div class="col-lg-3">
-					<h2 class="text-center">Last Comment</h2>
-					<h1 class="text-center">Aug 20, 2016</h1>
+				<div class="page-header">
+					<h1>Setup</h1>
 				</div>
 
-            </div>
-		</div>
+				<div class="bs-component">
 
-		<div class="row">
+					<div id="noPrevious" style="display:none">
+						<p>
+							It looks like this is your first time here. Enter a forum name below 
+							and we will attempt to download 100% of the comments for that forum.
+						</p>
+						<form class="form-inline">
+							<div class="form-group">
+								<label>New Forum
+								<input type="text" id="newForum" class="form-control" placeholder="forum name" value="cflib">
+								</labe>
+								<button class="btn btn-primary setupButton">Analyze</button>
+							</div>
+						</form>
+					</div>
 
-			<div class="page-header">
-              <h1>Comments Per Year</h1>
-            </div>
+					<div id="hasPrevious" style="display:none">
+						<p>
+							Your last used forum is listed below. It was last updated <span id="lastCheck"></span>. 
+						</p>
+						<form class="form-inline">
+							<div class="form-group">
+								<label>Current Forum
+								<input type="text" id="oldForum" class="form-control">
+								</labe>
+								<button class="btn btn-primary setupButton">Analyze</button>
+							</div>
+						</form>
+					</div>
+				</div>
 
-			<div class="bs-component">
-				<canvas id="chart_byyear" width="500" height="200"></canvas>
 			</div>
+
 		</div>
 
-		<div class="row">
+		<div id="dataReady" style="display:none">
 
-			<div class="page-header">
-              <h1>Comments by Day of Week</h1>
-            </div>
+			<div class="row">
 
-			<div class="bs-component">
-				<canvas id="chart_bydow" width="500" height="200"></canvas>
+				<div class="page-header">
+				<h1>General Stats</h1>
+				</div>
+
+				<div class="bs-component">
+
+					<div class="col-lg-3">
+						<h2 class="text-center">Total Comments</h2>
+						<h1 class="text-center"><span id="totalComments"></span></h1>
+					</div>
+					<div class="col-lg-3">
+						<h2 class="text-center">Avg. Per Thread</h2>
+						<h1 class="text-center"><span id="avgPerThread"></span></h1>
+					</div>
+					<div class="col-lg-3">
+						<h2 class="text-center">First Comment</h2>
+						<h1 class="text-center"><span id="firstComment"></span></h1>
+					</div>
+					<div class="col-lg-3">
+						<h2 class="text-center">Last Comment</h2>
+						<h1 class="text-center"><span id="lastComment"></span></h1>
+					</div>
+
+				</div>
 			</div>
+
+			<div class="row">
+
+				<div class="page-header">
+				<h1>Comments Per Year</h1>
+				</div>
+
+				<div class="bs-component">
+					<canvas id="chart_byyear" width="500" height="200"></canvas>
+				</div>
+			</div>
+
+			<div class="row">
+
+				<div class="page-header">
+				<h1>Comments by Day of Week</h1>
+				</div>
+
+				<div class="bs-component">
+					<canvas id="chart_bydow" width="500" height="200"></canvas>
+				</div>
+			</div>
+
 		</div>
-		<p/><p/><br/><br/>
+
+		<div class="row" id="status"></div>
 
 	</div>
 
-	<script>
-	var ctx = document.getElementById("chart_byyear");
 
-var data = {
-    labels: ["2003", "2004", "2005", "2006", "2007", "2008", "2009","2010","2011","2012","2013","2014","2015","2016"],
-    datasets: [
-        {
-            label: "",
-            fill: false,
-            lineTension: 0.1,
-            backgroundColor: "rgba(75,192,192,0.4)",
-            borderColor: "rgba(75,192,192,1)",
-            borderCapStyle: 'butt',
-            borderDash: [],
-            borderDashOffset: 0.0,
-            borderJoinStyle: 'miter',
-            pointBorderColor: "rgba(75,192,192,1)",
-            pointBackgroundColor: "#fff",
-            pointBorderWidth: 1,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: "rgba(75,192,192,1)",
-            pointHoverBorderColor: "rgba(220,220,220,1)",
-            pointHoverBorderWidth: 2,
-            pointRadius: 1,
-            pointHitRadius: 10,
-            data: [655, 834, 3706, 7724, 7402, 7011, 5926,4405,5287,3603,4017,3510,1715,1341],
-            spanGaps: false,
-        }
-    ]
-};
-var options = {
-	legend:{display:false}
-};
-var myLineChart = new Chart(ctx, {
-    type: 'line',
-    data: data,
-    options: options
-});
+	<script src="app.js"></script>
 
-var ctx = document.getElementById("chart_bydow");
-
-var data2 = {
-	labels:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
-
-	datasets:[
-		{
-			backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255,99,132,1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-			borderWidth:1,
-			data:[32,344,112,90,321,700,100]
-		}
-	]
-}
-
-var myBarChart = new Chart(ctx, {
-    type: 'bar',
-    data: data2,
-    options: options
-});
-	</script>
 	</body>
 </html>
