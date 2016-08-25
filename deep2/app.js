@@ -6,6 +6,8 @@ var key = 'XrkXWYcSYFsQC74AMA9J37tNXuWbw0PwRl2DZSx3LHfu3pMJMio8Gts9qUAMBAV5';
 
 $(document).ready(function() {
 
+	Chart.defaults.global.elements.rectangle.backgroundColor = 'rgba(75,192,192,1)';
+
 	$setup = $('#setup');
 	$dataReady = $('#dataReady');
 	$status = $('#status');
@@ -99,6 +101,7 @@ function initDb(forum) {
 		postOS.createIndex("created", "created", { unique: false});
 		postOS.createIndex("authorName", "author.name", { unique: false});
 		postOS.createIndex("thread", "thread.id", { unique: false});
+		postOS.createIndex("dow", "dow", { unique: false});
 		
 	}
 
@@ -153,10 +156,11 @@ function doStats() {
 	getAvgComments();
 
 	getFirstAndLastComments().then(function(first,last) {
+
 		$('#firstComment').text(displayDate(first));
 		$('#lastComment').text(displayDate(last));	
+
 		getCommentsPerYear(first.getFullYear(),last.getFullYear()).then(function(result) {
-			console.log('done getting years',result);	
 			//get the keys and sort
 			var years = Object.keys(result).sort();
 			var yearData = [];
@@ -207,6 +211,66 @@ function doStats() {
 
 	});
 
+	getCommentsPerDOW().then(function(res) {
+		
+		var options = {
+			legend:{display:false}
+		};
+
+		var ctx = document.getElementById("chart_bydow");
+
+		var data = {
+			labels:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+			datasets:[
+				{
+
+					borderWidth:1,
+					data:res
+				}
+			]
+		}
+
+		var myBarChart = new Chart(ctx, {
+			type: 'bar',
+			data: data,
+			options: options
+		});
+
+	});
+
+	getThreadStats().then(function(res) {
+		var s = '';
+		res.forEach(function(t) {
+			s += '<tr><td><a href="'+t.link+'">'+t.title+'</a></td><td>'+t.count+'</td></tr>';
+		});
+		$('#threadTable tbody').append(s);
+	});
+
+	getAuthorStats().then(function(res) {
+		var s = '';
+
+		for(var i=0;i<10;i++) {
+			var authorOb = res[i];
+			console.dir(authorOb);
+			s += `
+<div class="panel panel-default">
+  <div class="panel-heading">${authorOb.author.name}</div>
+  <div class="panel-body">
+  <img src="${authorOb.author.avatar.large.permalink}">
+  ${authorOb.author.name} has posted ${authorOb.count} times. `; 
+  
+  			if(authorOb.author.joinedAt) s += `They joined Disqus on ${displayDate(new Date(authorOb.author.joinedAt))}. `;
+  			if(authorOb.author.url) s += `Their home page is <a href="${authorOb.author.url}">${authorOb.author.url}</a>. `;
+
+/*  
+  `They joined Disqus on ${authorOb.author.joinedAt} and their
+  home page is <a href="${authorOb.author.url}">${authorOb.author.url}</a>
+  */
+  			s += '</div></div>';
+
+		}
+		$('#topCommentersResults').html(s);
+	});
 
 }
 
@@ -237,6 +301,7 @@ function storeData(posts) {
 
 	posts.forEach(function(p) {
 		p.created = (new Date(p.createdAt)).getTime();
+		p.dow = (new Date(p.createdAt)).getDay();
 		var req = store.put(p);
 		req.onerror = function(e) {
 			console.log('add error', e);
@@ -365,7 +430,6 @@ function getCommentsPerYear(first,last) {
 		var yearEnd = new Date(year,11,31,23,59,59).getTime();
 		var range = IDBKeyRange.bound(yearBegin, yearEnd);
 		posts.index('created').count(range).onsuccess = function(e) {
-			console.log('Year '+year +' had '+e.target.result+ ' comments');
 			yearData[year] = e.target.result;
 			done++;
 			if(done === years.length) {
@@ -377,38 +441,113 @@ function getCommentsPerYear(first,last) {
 	return def;
 }
 
+function getCommentsPerDOW() {
+	var def = new $.Deferred();
 
+	var trans = db.transaction(['posts'], 'readonly');
+	var posts = trans.objectStore('posts');
 
+	//see lame msg in year stat
+	var done = 0;
+	var dow = [];
 
-/*
-
-
-Chart.defaults.global.elements.rectangle.backgroundColor = 'rgba(75,192,192,1)';
-var options = {
-	legend:{display:false}
-};
-var myLineChart = new Chart(ctx, {
-    type: 'line',
-    data: data,
-    options: options
-});
-
-var ctx = document.getElementById("chart_bydow");
-
-var data2 = {
-	labels:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
-	datasets:[
-		{
-
-			borderWidth:1,
-			data:[32,344,112,90,321,700,100]
-		}
-	]
+	for(let i=0;i<7;i++) {
+		let range = IDBKeyRange.only(i);
+		
+		posts.index('dow').count(range).onsuccess = function(e) {
+			dow[i] = e.target.result;
+			done++;
+			if(done === 7) def.resolve(dow);
+		};
+		
+	}
+	return def;
 }
 
-var myBarChart = new Chart(ctx, {
-    type: 'bar',
-    data: data2,
-    options: options
-});
-*/
+function getThreadStats() {
+	var def = new $.Deferred();
+
+	var trans = db.transaction(['posts'], 'readonly');
+	var posts = trans.objectStore('posts');
+
+	var threads = [];
+	posts.index('thread').openCursor(null,'nextunique').onsuccess = function(e) {
+		var cursor = e.target.result;
+		if(cursor) {
+			//console.log('item', cursor.value.id, cursor.value.author.name);
+			threads.push(cursor.value.thread);
+			cursor.continue();
+		} else {
+			console.log(threads.length + ' total threads');
+			//now lets sort
+
+			var result = [];
+			threads.sort(function(a,b) {
+				if(a.posts > b.posts) return -1;
+				if(a.posts < b.posts) return 1;
+				return 0;
+			});
+			for(var i=0;i<10;i++) {
+				result.push({title:threads[i].title, link:threads[i].link, count:threads[i].posts});
+			}
+			def.resolve(result);	
+
+		}
+	}
+	return def;
+}
+
+function getAuthorStats() {
+	var def = new $.Deferred();
+
+	var trans = db.transaction(['posts'], 'readonly');
+	var posts = trans.objectStore('posts');
+
+	var authors = [];
+	posts.index('authorName').openCursor(null,'nextunique').onsuccess = function(e) {
+		var cursor = e.target.result;
+		if(cursor) {
+			//console.log('item', cursor.value.id, cursor.value.author.name);
+			authors.push(cursor.value.author);
+			cursor.continue();
+		} else {
+			console.log(authors.length + ' total authors');
+
+			var totalAuthor = authors.length;
+			var authorInfo = [];
+
+			authors.forEach(function(author) {
+
+				var trans = db.transaction(['posts'], 'readonly');
+				var posts = trans.objectStore('posts');
+
+				var range = IDBKeyRange.only(author.name);
+
+				posts.index('authorName').count(range).onsuccess = function(e) {
+					//console.log('result for '+author.name+' '+e.target.result);
+					authorInfo.push({author:author, count:e.target.result});
+					if(authorInfo.length === totalAuthor) doComplete();
+				};
+
+			});
+
+			var doComplete = function() {
+				authorInfo.sort(function(a,b) {
+					if(a.count > b.count) return -1;
+					if(a.count < b.count) return 1;
+					return 0;
+				});
+				def.resolve(authorInfo);
+			}
+
+
+		}
+	}
+
+	return def;
+}
+
+//hidden method to nuke the db
+function killme(str) {
+	window.indexedDB.deleteDatabase(str);
+}
