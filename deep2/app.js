@@ -4,6 +4,15 @@ var forum;
 var key = 'XrkXWYcSYFsQC74AMA9J37tNXuWbw0PwRl2DZSx3LHfu3pMJMio8Gts9qUAMBAV5';
 
 
+//credit: https://www.quora.com/How-do-I-get-the-number-of-days-between-two-dates-in-Javascript/answers/9499763?share=94306187&srid=4in
+Date.daysBetween = function( date1, date2 ) {   //Get 1 day in milliseconds   
+	var one_day=1000*60*60*24;    // Convert both dates to milliseconds
+	var date1_ms = date1.getTime();   
+	var date2_ms = date2.getTime();    // Calculate the difference in milliseconds  
+	var difference_ms = date2_ms - date1_ms;        // Convert back to days and return   
+	return Math.round(difference_ms/one_day); 
+} 
+
 $(document).ready(function() {
 
 	Chart.defaults.global.elements.rectangle.backgroundColor = 'rgba(75,192,192,1)';
@@ -153,14 +162,16 @@ function doStats() {
 		$('#totalComments').text(count);
 	});
 
-	getAvgComments();
+	getAvgComments().then(result => {
+		$('#avgPerDay').text(result);
+	});
 
-	getFirstAndLastComments().then(function(first,last) {
+	getFirstAndLastComments().then(function(result) {
 
-		$('#firstComment').text(displayDate(first));
-		$('#lastComment').text(displayDate(last));	
+		$('#firstComment').text(displayDate(result.first));
+		$('#lastComment').text(displayDate(result.last));	
 
-		getCommentsPerYear(first.getFullYear(),last.getFullYear()).then(function(result) {
+		getCommentsPerYear(result.first.getFullYear(),result.last.getFullYear()).then(function(result) {
 			//get the keys and sort
 			var years = Object.keys(result).sort();
 			var yearData = [];
@@ -374,6 +385,21 @@ function getTotalComments() {
 }
 
 function getAvgComments() {
+	let total = getTotalComments();
+	let fl = getFirstAndLastComments();
+	let def = new $.Deferred();
+
+	Promise.all([total, fl]).then(results => {
+		let total = results[0];
+		let fl = results[1];
+		let totalDays = Date.daysBetween(fl.first, fl.last);
+		console.log('total days is '+totalDays);
+		let avgcomments = (total / totalDays).toFixed(2);
+		console.log('avg is '+avgcomments);
+		def.resolve(avgcomments);
+	});
+
+	return def;
 }
 
 function getFirstAndLastComments() {
@@ -393,7 +419,7 @@ function getFirstAndLastComments() {
 					var d = new Date(cursor.value.created);
 					last = d;
 					console.log('comments from '+first+' to '+last);
-					def.resolve(first,last);
+					def.resolve({first,last});
 				} 
 
 			}
