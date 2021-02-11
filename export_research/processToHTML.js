@@ -14,7 +14,7 @@ const OUTPUT_DIR = './output/';
 let threads = JSON.parse(fs.readFileSync(INPUT, 'utf-8'));
 
 // TEMP
-threads = threads.slice(0,50);
+// threads = threads.slice(0,50);
 
 console.log(`Working with ${threads.length} threads.`);
 
@@ -34,9 +34,11 @@ console.log('Complete.');
 /*
 given a thread, determine a strategy for generating a file name. for me, this was
 based on the url, minus the host
+
+changed to .inc so Eleventy wouldn't try to process liquid tags
 */
 function generateFileName(t) {
-	return t.link.replace('http://www.raymondcamden.com/','') + '.html';
+	return t.link.replace('http://www.raymondcamden.com/','') + '.inc';
 }
 
 /*
@@ -53,16 +55,20 @@ function generateContent(posts) {
 			console.log('PARENT', p.parent);
 			console.log(JSON.stringify(p, null, '\t'));
 			*/
-			parentText = `<span class="comment_parent_link">In reply to <a href="#c_${p.parent}">#${parentNumber+1}</a></span>`;
+			parentText = `(In reply to <a href="#c_${p.parent}">#${parentNumber+1}</a>) `;
 		}
 		html += `
 <div class="comment" id="c_${p.id}">
-<img src="${p.author.avatar.small.permalink}" class="comment_author_profile_pic">
-<span class="comment_number">${idx+1}</span>
-<span class="comment_author">${p.author.name}</span>
-<span class="comment_date">Posted on ${dateFormat(p.createdAt)}</span>
-${parentText}
-<div class="comment_text">${p.message}</div>
+	<div>
+		<img src="${p.author.avatar.small.permalink}" class="comment_author_profile_pic">
+	</div>
+	<div>
+		<div class="comment_header">
+		Comment <a href="#c_${p.id}">${idx+1}</a> ${parentText}by ${p.author.name}
+		posted on ${dateFormat(p.createdAt)}
+		</div>
+		<div class="comment_text">${p.message}</div>
+	</div>
 </div>
 		`;
 	});
